@@ -1,0 +1,23 @@
+version: '3'
+services:
+  db:
+    container_name: sql2019
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      ACCEPT_EULA: 'Y'
+      SA_PASSWORD: 'Super5ecret!'
+    volumes:
+      - mssql_data:/var/opt/mssql
+    ports:
+      - 1433:1433
+    restart: always
+  web:
+    container_name: easkb2
+    image: vuhuyenmily/easkb2:v1.0
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+volumes:
+  mssql_data:
+    

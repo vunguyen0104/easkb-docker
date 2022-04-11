@@ -1,0 +1,148 @@
+HOW TO CONTAINERIZE EXISTING EASKB2 APPLICATION
+
+On Docker for Windows => switch to Linux container
+Open Ubuntu WSL2 from Windows Terminal
+
+1. Setting up project location
+$cd projects/containers
+$mkdir easkb2 && cd easkb2
+$code .
+
+Project Structure
+easkb2/
+===>app/
+======>webapp
+==========>resources
+==========>View
+==========>WEB-INF
+==========>index.xhtml
+===>databses/
+======>easkb.bak
+======>useraccess.bak
+===>Dockerfile
+===>docker-compose.yml
+===>easkb2.xml
+	
+
+1. Backing up databses of EASKB2 application
+Log on to VM and backup both EASKB2 and USER_ACCESS databses as easkb.bak and useraccess.bak respectively
+Copy them both to easkb2/databases folder
+
+2. Prepare docker-compose.yml file as follow
+
+version: '3'
+services:
+  db:
+    container_name: sql2019
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      ACCEPT_EULA: 'Y'
+      SA_PASSWORD: 'Super5ecret!'
+    volumes:
+      - mssql_data:/var/opt/mssql
+    ports:
+      - 1433:1433
+    restart: always
+volumes:
+  mssql_data:
+  
+3. Running sql2019 container
+$docker-compose up
+
+Notes:
+After executing step 3 => new volume called easkb2_mssql_data 
+===> docker-compose adds project name "easkb2" as a prefix to its newly created volume
+
+4. Restore backup databases on the running container "sql2019"
+
+Copy Backup Databases:
+Notes:
+===> For Linux container, no need to stop a running container before copying file to it
+===> For Windows container, need to stop a running container before copying file to it
+
+docker cp databases/easkb.bak sql2019:/var/backups/easkb.bak
+docker cp databases/useraccess.bak sql2019:/var/backups/useraccess.bak
+
+Using client tools such as MSSQL Management Studio or MS Azure Studio to connect to the running container "sql2019"
+Restore both EASKB2 and USER_ACCESS databases
+Run couple of queries against both databases tpo make sure everything is good.
+
+5. Copy existing EASKB2 application
+Copy webapp folder from existing EASKB2 project to app folder
+
+6. Update env-constants.properties
+#---------------------------------------------------------
+# CONFIGURATIONS FOR DATASOURCES
+#---------------------------------------------------------
+	APP_C3P0_XML_CONFIG_NAME=EASKB2_DOCKER
+	UA_C3P0_XML_CONFIG_NAME=USER_ACCESS_DOCKER
+	
+	# Job History
+	JOB_HISTORY_LOG_FILE_DIRECTORY=/server_logs/JobLogFiles/
+
+7. Update c3p0-config.xml
+	<!-- APPLICATION CONNECTION POOL -->	
+	<named-config name="EASKB2_DOCKER">
+		<property name="jdbcUrl">jdbc:jtds:sqlserver://db:1433/EASKB2</property>
+  		<property name="driverClass">net.sourceforge.jtds.jdbc.Driver</property>
+ 		<property name="user">sa</property>
+  		<property name="password">Super5ecret!</property>
+	</named-config>	
+		
+	<!-- USER ACCESS CONNECTION POOL -->
+	<named-config name="USER_ACCESS_DOCKER">
+		<property name="jdbcUrl">jdbc:jtds:sqlserver://db:1433/USER_ACCESS</property>
+  		<property name="driverClass">net.sourceforge.jtds.jdbc.Driver</property>
+  		<property name="user">sa</property>
+  		<property name="password">Super5ecret!</property>
+	</named-config>
+	
+8. Update log4j2.xml
+	<Properties>
+		<Property name="baseLogDir">/server_logs/easkb2</Property>
+		<Property name="appName">EASKB2</Property>
+	</Properties>	
+
+9. Prepare Dockerfile as follow
+
+FROM tomcat:8.5.78-jdk8-openjdk
+
+LABEL author="Developer"
+LABEL email="developer@email.com"
+
+RUN mkdir -p /server_logs/easkb2 \
+    && mkdir -p /server_logs/JobLogFiles \
+    && mkdir -p /usr/local/tomcat/conf/Catalina/localhost
+
+COPY easkb2.xml /usr/local/tomcat/conf/Catalina/localhost
+
+COPY app /
+
+CMD ["catalina.sh", "run"]
+
+10. Build an image for EASKB2
+docker image build -t vuhuyenmily/easkb2:v1.0 .
+
+11. Update docker-compose.yml to include image built in step 10
+version: '3'
+services:
+  db:
+    container_name: sql2019
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      ACCEPT_EULA: 'Y'
+      SA_PASSWORD: 'Super5ecret!'
+    volumes:
+      - mssql_data:/var/opt/mssql
+    ports:
+      - 1433:1433
+    restart: always
+  web:
+    container_name: easkb2
+    image: vuhuyenmily/easkb2:v1.0
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+volumes:
+  mssql_data:
