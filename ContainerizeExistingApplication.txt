@@ -33,8 +33,8 @@ Copy them both to easkb2/databases folder
 version: '3'
 services:
   db:
-    container_name: sql2019
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: sqledge
+    image: mcr.microsoft.com/azure-sql-edge:latest
     environment:
       ACCEPT_EULA: 'Y'
       SA_PASSWORD: 'Super5ecret!'
@@ -50,26 +50,39 @@ volumes:
 networks:
   java-mssql:
   
-3. Running sql2019 container
+3. Running sqledge container
 $docker-compose up
 
 Notes:
-After executing step 3 => new volume called easkb2_mssql_data 
-===> docker-compose adds project name "easkb2" as a prefix to its newly created volume
+After executing step 3 => new volume called easkb2-docker_mssql_data 
+===> docker-compose adds project name "easkb2-docker" as a prefix to its newly created volume
 
-4. Restore backup databases on the running container "sql2019"
+4. Restore backup databases on the running container "sqledge"
 
 Copy Backup Databases:
 Notes:
 ===> For Linux container, no need to stop a running container before copying file to it
 ===> For Windows container, need to stop a running container before copying file to it
 
-docker cp databases/easkb.bak sql2019:/var/backups/easkb.bak
-docker cp databases/useraccess.bak sql2019:/var/backups/useraccess.bak
+docker cp databases/easkb.bak sqledge:/var/backups/easkb.bak
+docker cp databases/useraccess.bak sqledge:/var/backups/useraccess.bak
 
-Using client tools such as MSSQL Management Studio or MS Azure Studio to connect to the running container "sql2019"
-Restore both EASKB2 and USER_ACCESS databases
+Using client tools such as MS Azure Studio to connect to the running container "sqledge"
+Restore both EASKB2 and USER_ACCESS databases through command lines below:
+  RESTORE DATABASE EASKB2 FROM DISK = '/var/backups/easkb.bak'
+  WITH
+  MOVE 'EASKB' TO '/var/opt/mssql/data/EASKB2_Data.mdf',
+  MOVE 'EASKB_log' TO '/var/opt/mssql/data/EASKB2_Log.ldf'
+  GO
+
+  RESTORE DATABASE USER_ACCESS FROM DISK = '/var/backups/useraccess.bak'
+  WITH
+  MOVE 'USER_ACCESS_Data' TO '/var/opt/mssql/data/USER_ACCESS_Data.mdf',
+  MOVE 'USER_ACCESS_Log' TO '/var/opt/mssql/data/USER_ACCESS_Log.ldf'
+  GO
+
 Run couple of queries against both databases tpo make sure everything is good.
+
 
 5. Copy existing EASKB2 application
 Copy webapp folder from existing EASKB2 project to app folder
@@ -131,8 +144,8 @@ docker image build -t vuhuyenmily/easkb2:v1.0 .
 version: '3'
 services:
   db:
-    container_name: sql2019
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: sqledge
+    image: mcr.microsoft.com/azure-sql-edge:latest
     environment:
       ACCEPT_EULA: 'Y'
       SA_PASSWORD: 'Super5ecret!'
