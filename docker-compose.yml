@@ -5,7 +5,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2019-latest
     environment:
       ACCEPT_EULA: 'Y'
-      SA_PASSWORD: 'Super5ecret!'
+      SA_PASSWORD: ${SA_PASSWORD}
     volumes:
       - mssql_data:/var/opt/mssql
     ports:

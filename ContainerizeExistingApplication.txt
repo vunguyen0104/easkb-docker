@@ -156,5 +156,12 @@ volumes:
   mssql_data:
 networks:
   java-mssql:
+
+10. Run the application stack
+$docker-compose --env-file .env up
+
+11. Shutdown the application stack
+$docker-compose down
+
     
 
