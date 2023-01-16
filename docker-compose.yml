@@ -5,7 +5,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2019-latest
     environment:
       ACCEPT_EULA: 'Y'
-      SA_PASSWORD: ${SA_PASSWORD}
+      SA_PASSWORD: ${MSSQL_SA_PASSWORD}
     volumes:
       - mssql_data:/var/opt/mssql
     ports:
@@ -21,7 +21,7 @@ services:
     networks:
       - java-mssql
     depends_on:
-      - db
+      - db  
 volumes:
   mssql_data:
 networks:
